@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, MessageCircle, Share2, MoreHorizontal, User } from 'lucide-react'
+import { Heart, MessageCircle, Share2, MoreHorizontal, User, Eye } from 'lucide-react'
 import { Design } from '../types'
 import { useAuth } from '../contexts/AuthContext'
 import { useDesigns } from '../contexts/DesignsContext'
@@ -18,6 +18,7 @@ const DesignCard: React.FC<DesignCardProps> = ({ design, userLikes = [] }) => {
   const [isLiked, setIsLiked] = useState(userLikes.includes(design.id))
   const [likesCount, setLikesCount] = useState(design.likes_count)
   const [isLoading, setIsLoading] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -58,10 +59,8 @@ const DesignCard: React.FC<DesignCardProps> = ({ design, userLikes = [] }) => {
         console.error('Error sharing:', error)
       }
     } else {
-      // Fallback to clipboard
       try {
         await navigator.clipboard.writeText(`${window.location.origin}/design/${design.id}`)
-        // You could show a toast here
       } catch (error) {
         console.error('Error copying to clipboard:', error)
       }
@@ -70,68 +69,82 @@ const DesignCard: React.FC<DesignCardProps> = ({ design, userLikes = [] }) => {
 
   return (
     <div className="masonry-item">
-      <Link to={`/design/${design.id}`} className="design-card group block">
-        {/* Image */}
+      <Link to={`/design/${design.id}`} className="design-card block">
+        {/* Image Container */}
         <div className="relative overflow-hidden">
+          {!imageLoaded && (
+            <div className="aspect-[4/5] bg-muted animate-pulse flex items-center justify-center">
+              <Eye className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
           <img
             src={getOptimizedImageUrl(design.image_url, 400)}
             alt={design.title}
-            className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+            className={`w-full h-auto object-cover transition-all duration-500 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0 absolute inset-0'
+            }`}
             loading="lazy"
+            onLoad={() => setImageLoaded(true)}
           />
           
-          {/* Overlay on hover */}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-            <div className="flex space-x-2">
-              <button
-                onClick={handleLike}
-                disabled={!user || isLoading}
-                className={`p-2 rounded-full transition-all duration-200 ${
-                  isLiked 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-white text-gray-700 hover:bg-red-50 hover:text-red-500'
-                } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-              </button>
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleLike}
+                  disabled={!user || isLoading}
+                  className={`p-2.5 rounded-xl backdrop-blur-sm transition-all duration-200 ${
+                    isLiked 
+                      ? 'bg-red-500 text-white shadow-lg' 
+                      : 'bg-white/20 text-white hover:bg-red-500/20'
+                  } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                </button>
+                
+                <button
+                  onClick={handleShare}
+                  className="p-2.5 rounded-xl bg-white/20 text-white hover:bg-blue-500/20 backdrop-blur-sm transition-all duration-200"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+              </div>
               
-              <button
-                onClick={handleShare}
-                className="p-2 rounded-full bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-500 transition-all duration-200"
-              >
-                <Share2 className="h-4 w-4" />
+              <button className="p-2.5 rounded-xl bg-white/20 text-white hover:bg-gray-500/20 backdrop-blur-sm transition-all duration-200">
+                <MoreHorizontal className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-5">
           {/* Title */}
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+          <h3 className="font-semibold text-foreground mb-2 line-clamp-2 text-lg">
             {design.title}
           </h3>
 
           {/* Description */}
           {design.description && (
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
               {design.description}
             </p>
           )}
 
           {/* Tags */}
           {design.tags && design.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {design.tags.slice(0, 3).map((tag, index) => (
                 <span
                   key={index}
-                  className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
+                  className="inline-block px-2.5 py-1 text-xs bg-muted text-muted-foreground rounded-lg font-medium"
                 >
                   #{tag}
                 </span>
               ))}
               {design.tags.length > 3 && (
-                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                <span className="inline-block px-2.5 py-1 text-xs bg-muted text-muted-foreground rounded-lg font-medium">
                   +{design.tags.length - 3}
                 </span>
               )}
@@ -140,22 +153,27 @@ const DesignCard: React.FC<DesignCardProps> = ({ design, userLikes = [] }) => {
 
           {/* User info and stats */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {design.user_avatar_url ? (
                 <img
                   src={design.user_avatar_url}
                   alt={design.user_name}
-                  className="h-6 w-6 rounded-full object-cover"
+                  className="h-8 w-8 rounded-xl object-cover ring-2 ring-border"
                 />
               ) : (
-                <div className="h-6 w-6 bg-primary-500 rounded-full flex items-center justify-center">
-                  <User className="h-3 w-3 text-white" />
+                <div className="h-8 w-8 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
                 </div>
               )}
-              <span className="text-sm text-gray-600">{design.user_name}</span>
+              <div>
+                <span className="text-sm font-medium text-foreground">{design.user_name}</span>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(design.created_at), { addSuffix: true })}
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-3 text-sm text-gray-500">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <Heart className="h-4 w-4" />
                 <span>{likesCount}</span>
@@ -165,11 +183,6 @@ const DesignCard: React.FC<DesignCardProps> = ({ design, userLikes = [] }) => {
                 <span>{design.comments_count}</span>
               </div>
             </div>
-          </div>
-
-          {/* Time */}
-          <div className="mt-2 text-xs text-gray-400">
-            {formatDistanceToNow(new Date(design.created_at), { addSuffix: true })}
           </div>
         </div>
       </Link>
